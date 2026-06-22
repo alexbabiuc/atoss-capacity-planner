@@ -1,8 +1,9 @@
 package com.capacityplanner.controller;
 
+import com.capacityplanner.dto.EpicRequest;
 import com.capacityplanner.dto.EpicSummaryDto;
-import com.capacityplanner.entity.Epic;
 import com.capacityplanner.service.PlanningService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,14 +33,13 @@ public class EpicController {
     }
 
     @PostMapping
-    public ResponseEntity<Epic> createEpic(@RequestBody Epic epic) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(planningService.createEpic(epic));
+    public ResponseEntity<EpicSummaryDto> createEpic(@RequestBody EpicRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(planningService.createEpic(req));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Epic> updateEpic(@PathVariable UUID id, @RequestBody Epic epic) {
-        return ResponseEntity.ok(planningService.updateEpic(id, epic));
+    public ResponseEntity<EpicSummaryDto> updateEpic(@PathVariable UUID id, @RequestBody EpicRequest req) {
+        return ResponseEntity.ok(planningService.updateEpic(id, req));
     }
 
     @DeleteMapping("/{id}")

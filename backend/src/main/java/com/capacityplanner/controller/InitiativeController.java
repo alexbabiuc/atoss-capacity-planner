@@ -1,5 +1,6 @@
 package com.capacityplanner.controller;
 
+import com.capacityplanner.dto.InitiativeRequest;
 import com.capacityplanner.dto.InitiativeSummaryDto;
 import com.capacityplanner.entity.Initiative;
 import com.capacityplanner.service.PlanningService;
@@ -29,15 +30,14 @@ public class InitiativeController {
     }
 
     @PostMapping
-    public ResponseEntity<Initiative> createInitiative(@RequestBody Initiative initiative) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(planningService.createInitiative(initiative));
+    public ResponseEntity<Initiative> createInitiative(@RequestBody InitiativeRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(planningService.createInitiative(req));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Initiative> updateInitiative(
         @PathVariable UUID id,
-        @RequestBody Initiative initiative) {
-        return ResponseEntity.ok(planningService.updateInitiative(id, initiative));
+        @RequestBody InitiativeRequest req) {
+        return ResponseEntity.ok(planningService.updateInitiative(id, req));
     }
 }

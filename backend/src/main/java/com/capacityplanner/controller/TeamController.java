@@ -1,5 +1,6 @@
 package com.capacityplanner.controller;
 
+import com.capacityplanner.dto.TeamRequest;
 import com.capacityplanner.dto.TeamSummaryDto;
 import com.capacityplanner.entity.Team;
 import com.capacityplanner.service.PlanningService;
@@ -20,7 +21,6 @@ public class TeamController {
 
     private final PlanningService planningService;
 
-    /** List all teams */
     @GetMapping
     public ResponseEntity<List<TeamSummaryDto>> listTeams(
         @RequestParam(defaultValue = "MONTH") String granularity,
@@ -29,7 +29,6 @@ public class TeamController {
         return ResponseEntity.ok(planningService.getTeamSummaries(granularity, from, to));
     }
 
-    /** Single team with full capacity breakdown */
     @GetMapping("/{id}")
     public ResponseEntity<TeamSummaryDto> getTeam(
         @PathVariable UUID id,
@@ -40,13 +39,12 @@ public class TeamController {
     }
 
     @PostMapping
-    public ResponseEntity<Team> createTeam(@RequestBody Team team) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(planningService.createTeam(team));
+    public ResponseEntity<Team> createTeam(@RequestBody TeamRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(planningService.createTeam(req));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Team> updateTeam(@PathVariable UUID id, @RequestBody Team team) {
-        return ResponseEntity.ok(planningService.updateTeam(id, team));
+    public ResponseEntity<Team> updateTeam(@PathVariable UUID id, @RequestBody TeamRequest req) {
+        return ResponseEntity.ok(planningService.updateTeam(id, req));
     }
 }

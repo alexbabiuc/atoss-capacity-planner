@@ -19,21 +19,23 @@ import java.util.stream.Collectors;
  * Orchestration layer between controllers and the derivation engine.
  *
  * Responsibilities:
- *   - Load stored entities via repositories
+ *   - Accept request DTOs from controllers (never raw entities)
+ *   - Load and mutate stored entities via repositories
  *   - Invoke DerivationService to compute derived fields
- *   - Assemble and return response DTOs
+ *   - Assemble and return response DTOs (never raw entities with lazy proxies)
  *   - Write ChangeSets on mutations
  */
 @Service
 @RequiredArgsConstructor
 public class PlanningService {
 
-    private final TeamRepository teamRepository;
-    private final PersonRepository personRepository;
-    private final EpicRepository epicRepository;
-    private final InitiativeRepository initiativeRepository;
-    private final ChangeSetRepository changeSetRepository;
-    private final DerivationService derivation;
+    private final TeamRepository        teamRepository;
+    private final PersonRepository      personRepository;
+    private final EpicRepository        epicRepository;
+    private final InitiativeRepository  initiativeRepository;
+    private final ChangeSetRepository   changeSetRepository;
+    private final SkillRepository       skillRepository;
+    private final DerivationService     derivation;
 
     // ── Teams ─────────────────────────────────────────────────────────────────
 
@@ -99,60 +101,71 @@ public class PlanningService {
     }
 
     @Transactional
-    public Team createTeam(Team team) {
+    public Team createTeam(TeamRequest req) {
+        Team team = new Team();
+        team.setName(req.name());
+        if (req.overheadFactor() != null) team.setOverheadFactor(req.overheadFactor());
+        if (req.supportFactor()  != null) team.setSupportFactor(req.supportFactor());
         return teamRepository.save(team);
     }
 
     @Transactional
-    public Team updateTeam(UUID id, Team patch) {
+    public Team updateTeam(UUID id, TeamRequest req) {
         Team team = teamRepository.findById(id).orElseThrow();
-        if (patch.getName() != null)           team.setName(patch.getName());
-        if (patch.getOverheadFactor() != null) team.setOverheadFactor(patch.getOverheadFactor());
-        if (patch.getSupportFactor() != null)  team.setSupportFactor(patch.getSupportFactor());
+        if (req.name()           != null) team.setName(req.name());
+        if (req.overheadFactor() != null) team.setOverheadFactor(req.overheadFactor());
+        if (req.supportFactor()  != null) team.setSupportFactor(req.supportFactor());
         return teamRepository.save(team);
     }
 
     // ── People ────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<Person> getPersons(UUID teamId) {
-        return teamId != null
+    public List<PersonDto> getPersons(UUID teamId) {
+        List<Person> people = teamId != null
             ? personRepository.findByTeamId(teamId)
             : personRepository.findAll();
+        return people.stream().map(this::toPersonDto).toList();
     }
 
     @Transactional(readOnly = true)
-    public Person getPerson(UUID id) {
-        return personRepository.findById(id).orElseThrow();
+    public PersonDto getPerson(UUID id) {
+        return toPersonDto(personRepository.findById(id).orElseThrow());
     }
 
     @Transactional
-    public Person createPerson(Person person) {
-        return personRepository.save(person);
+    public PersonDto createPerson(PersonRequest req) {
+        Team team = teamRepository.findById(req.teamId()).orElseThrow();
+        Person person = new Person();
+        person.setName(req.name());
+        person.setTeam(team);
+        if (req.baseAvailability() != null) person.setBaseAvailability(req.baseAvailability());
+        if (req.skills()           != null) person.setSkills(resolvePersonSkills(req.skills()));
+        return toPersonDto(personRepository.save(person));
     }
 
     @Transactional
-    public Person updatePerson(UUID id, Person patch) {
+    public PersonDto updatePerson(UUID id, PersonRequest req) {
         Person person = personRepository.findById(id).orElseThrow();
-        if (patch.getName() != null)             person.setName(patch.getName());
-        if (patch.getBaseAvailability() != null) person.setBaseAvailability(patch.getBaseAvailability());
-        if (patch.getTeam() != null)             person.setTeam(patch.getTeam());
-        if (patch.getSkills() != null)           person.setSkills(patch.getSkills());
-        return personRepository.save(person);
+        if (req.name()             != null) person.setName(req.name());
+        if (req.teamId()           != null) person.setTeam(teamRepository.findById(req.teamId()).orElseThrow());
+        if (req.baseAvailability() != null) person.setBaseAvailability(req.baseAvailability());
+        if (req.skills()           != null) person.setSkills(resolvePersonSkills(req.skills()));
+        return toPersonDto(personRepository.save(person));
     }
 
     @Transactional
-    public Person addAvailabilityOverride(UUID personId, AvailabilityOverride override) {
+    public PersonDto addAvailabilityOverride(UUID personId, AvailabilityOverride override) {
         Person person = personRepository.findById(personId).orElseThrow();
         person.getAvailabilityOverrides().add(override);
-        return personRepository.save(person);
+        return toPersonDto(personRepository.save(person));
     }
 
     @Transactional
-    public Person removeAvailabilityOverride(UUID personId, int index) {
+    public PersonDto removeAvailabilityOverride(UUID personId, int index) {
         Person person = personRepository.findById(personId).orElseThrow();
         person.getAvailabilityOverrides().remove(index);
-        return personRepository.save(person);
+        return toPersonDto(personRepository.save(person));
     }
 
     // ── Initiatives ───────────────────────────────────────────────────────────
@@ -195,21 +208,30 @@ public class PlanningService {
     }
 
     @Transactional
-    public Initiative createInitiative(Initiative initiative) {
+    public Initiative createInitiative(InitiativeRequest req) {
+        Initiative initiative = new Initiative();
+        initiative.setName(req.name());
+        initiative.setTopDownEstimate(req.topDownEstimate());
+        initiative.setTargetDeliveryDate(req.targetDeliveryDate());
+        if (req.description()        != null) initiative.setDescription(req.description());
+        if (req.startDate()          != null) initiative.setStartDate(req.startDate());
+        if (req.priority()           != null) initiative.setPriority(req.priority());
+        if (req.ownerName()          != null) initiative.setOwnerName(req.ownerName());
+        if (req.status()             != null) initiative.setStatus(Initiative.Status.valueOf(req.status()));
         return initiativeRepository.save(initiative);
     }
 
     @Transactional
-    public Initiative updateInitiative(UUID id, Initiative patch) {
+    public Initiative updateInitiative(UUID id, InitiativeRequest req) {
         Initiative init = initiativeRepository.findById(id).orElseThrow();
-        if (patch.getName() != null)               init.setName(patch.getName());
-        if (patch.getDescription() != null)        init.setDescription(patch.getDescription());
-        if (patch.getTopDownEstimate() != null)    init.setTopDownEstimate(patch.getTopDownEstimate());
-        if (patch.getStartDate() != null)          init.setStartDate(patch.getStartDate());
-        if (patch.getTargetDeliveryDate() != null) init.setTargetDeliveryDate(patch.getTargetDeliveryDate());
-        if (patch.getPriority() != null)           init.setPriority(patch.getPriority());
-        if (patch.getOwnerName() != null)          init.setOwnerName(patch.getOwnerName());
-        if (patch.getStatus() != null)             init.setStatus(patch.getStatus());
+        if (req.name()               != null) init.setName(req.name());
+        if (req.description()        != null) init.setDescription(req.description());
+        if (req.topDownEstimate()    != null) init.setTopDownEstimate(req.topDownEstimate());
+        if (req.startDate()          != null) init.setStartDate(req.startDate());
+        if (req.targetDeliveryDate() != null) init.setTargetDeliveryDate(req.targetDeliveryDate());
+        if (req.priority()           != null) init.setPriority(req.priority());
+        if (req.ownerName()          != null) init.setOwnerName(req.ownerName());
+        if (req.status()             != null) init.setStatus(Initiative.Status.valueOf(req.status()));
         return initiativeRepository.save(init);
     }
 
@@ -239,21 +261,34 @@ public class PlanningService {
     }
 
     @Transactional
-    public Epic createEpic(Epic epic) {
-        return epicRepository.save(epic);
+    public EpicSummaryDto createEpic(EpicRequest req) {
+        Team team = teamRepository.findById(req.teamId()).orElseThrow();
+        Epic epic = new Epic();
+        epic.setName(req.name());
+        epic.setTeam(team);
+        epic.setEstimate(req.estimate());
+        epic.setStartDate(req.startDate());
+        epic.setDueDate(req.dueDate());
+        if (req.initiativeId()  != null) epic.setInitiative(initiativeRepository.findById(req.initiativeId()).orElseThrow());
+        if (req.priority()      != null) epic.setPriority(Epic.Priority.valueOf(req.priority()));
+        if (req.status()        != null) epic.setStatus(Epic.Status.valueOf(req.status()));
+        if (req.requiredSkills() != null) epic.setRequiredSkills(resolveSkillRequirements(req.requiredSkills()));
+        return toEpicSummaryDto(epicRepository.save(epic));
     }
 
     @Transactional
-    public Epic updateEpic(UUID id, Epic patch) {
+    public EpicSummaryDto updateEpic(UUID id, EpicRequest req) {
         Epic epic = epicRepository.findById(id).orElseThrow();
-        if (patch.getName() != null)        epic.setName(patch.getName());
-        if (patch.getDescription() != null) epic.setDescription(patch.getDescription());
-        if (patch.getEstimate() != null)    epic.setEstimate(patch.getEstimate());
-        if (patch.getStartDate() != null)   epic.setStartDate(patch.getStartDate());
-        if (patch.getDueDate() != null)     epic.setDueDate(patch.getDueDate());
-        if (patch.getPriority() != null)    epic.setPriority(patch.getPriority());
-        if (patch.getStatus() != null)      epic.setStatus(patch.getStatus());
-        return epicRepository.save(epic);
+        if (req.name()          != null) epic.setName(req.name());
+        if (req.teamId()        != null) epic.setTeam(teamRepository.findById(req.teamId()).orElseThrow());
+        if (req.initiativeId()  != null) epic.setInitiative(initiativeRepository.findById(req.initiativeId()).orElseThrow());
+        if (req.estimate()      != null) epic.setEstimate(req.estimate());
+        if (req.startDate()     != null) epic.setStartDate(req.startDate());
+        if (req.dueDate()       != null) epic.setDueDate(req.dueDate());
+        if (req.priority()      != null) epic.setPriority(Epic.Priority.valueOf(req.priority()));
+        if (req.status()        != null) epic.setStatus(Epic.Status.valueOf(req.status()));
+        if (req.requiredSkills() != null) epic.setRequiredSkills(resolveSkillRequirements(req.requiredSkills()));
+        return toEpicSummaryDto(epicRepository.save(epic));
     }
 
     @Transactional
@@ -277,43 +312,37 @@ public class PlanningService {
         LocalDate today = LocalDate.now();
         LocalDate horizon = today.plusMonths(12);
 
-        // 1. Identify affected teams
         Set<UUID> affectedTeamIds = resolveAffectedTeams(request.deltas());
 
-        // 2. Preload team data (populates L1 cache)
-        Map<UUID, Team> teamMap = new HashMap<>();
+        Map<UUID, Team>         teamMap    = new HashMap<>();
         Map<UUID, List<Person>> membersMap = new HashMap<>();
-        Map<UUID, List<Epic>> epicsMap = new HashMap<>();
+        Map<UUID, List<Epic>>   epicsMap   = new HashMap<>();
         for (UUID tid : affectedTeamIds) {
             teamMap.put(tid, teamRepository.findById(tid).orElseThrow());
             membersMap.put(tid, personRepository.findByTeamId(tid));
             epicsMap.put(tid, epicRepository.findByTeamId(tid));
         }
 
-        // 3. Baseline flags + loads (before any delta applied)
         Map<UUID, List<RiskFlagDto>> baselineFlags = new HashMap<>();
-        Map<UUID, Double> baselineLoads = new HashMap<>();
+        Map<UUID, Double>            baselineLoads = new HashMap<>();
         for (UUID tid : affectedTeamIds) {
             baselineFlags.put(tid, computeTeamRiskFlags(
                 teamMap.get(tid), membersMap.get(tid), epicsMap.get(tid), today, horizon));
             baselineLoads.put(tid, derivation.committedLoad(epicsMap.get(tid), today, horizon));
         }
 
-        // 4. Apply deltas in-memory — modifies the same L1-cache objects referenced by epicsMap/membersMap
         for (DeltaRequest d : request.deltas()) {
             applyDeltaField(d);
         }
 
-        // 5. Scenario flags + loads (same maps, now with modified state)
         Map<UUID, List<RiskFlagDto>> scenarioFlags = new HashMap<>();
-        Map<UUID, Double> scenarioLoads = new HashMap<>();
+        Map<UUID, Double>            scenarioLoads = new HashMap<>();
         for (UUID tid : affectedTeamIds) {
             scenarioFlags.put(tid, computeTeamRiskFlags(
                 teamMap.get(tid), membersMap.get(tid), epicsMap.get(tid), today, horizon));
             scenarioLoads.put(tid, derivation.committedLoad(epicsMap.get(tid), today, horizon));
         }
 
-        // 6. Diff flags
         Set<String> baselineKeys = baselineFlags.values().stream()
             .flatMap(Collection::stream).map(this::flagKey).collect(Collectors.toSet());
         Set<String> scenarioKeys = scenarioFlags.values().stream()
@@ -328,7 +357,6 @@ public class PlanningService {
             .filter(f -> !scenarioKeys.contains(flagKey(f)))
             .toList();
 
-        // 7. Capacity deltas per affected team
         List<TeamCapacityDeltaDto> capacityDeltas = affectedTeamIds.stream()
             .map(tid -> {
                 Team t = teamMap.get(tid);
@@ -403,6 +431,47 @@ public class PlanningService {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    private PersonDto toPersonDto(Person person) {
+        List<PersonDto.PersonSkillDto> skills = person.getSkills().stream()
+            .map(ps -> new PersonDto.PersonSkillDto(ps.getSkill(), ps.getProficiency().toString()))
+            .toList();
+        return new PersonDto(
+            person.getId(),
+            person.getName(),
+            person.getTeam().getId(),
+            person.getBaseAvailability(),
+            skills,
+            person.getAvailabilityOverrides()
+        );
+    }
+
+    private List<PersonSkill> resolvePersonSkills(List<PersonRequest.PersonSkillRequest> requests) {
+        return requests.stream()
+            .map(sr -> {
+                Skill skill = skillRepository.findById(sr.skillId()).orElseThrow(
+                    () -> new IllegalArgumentException("Skill not found: " + sr.skillId()));
+                PersonSkill ps = new PersonSkill();
+                ps.setSkill(skill);
+                ps.setProficiency(Proficiency.valueOf(sr.proficiency()));
+                return ps;
+            })
+            .toList();
+    }
+
+    private List<EpicSkillRequirement> resolveSkillRequirements(List<EpicRequest.SkillRequirementRequest> requests) {
+        return requests.stream()
+            .map(sr -> {
+                Skill skill = skillRepository.findById(sr.skillId()).orElseThrow(
+                    () -> new IllegalArgumentException("Skill not found: " + sr.skillId()));
+                EpicSkillRequirement req = new EpicSkillRequirement();
+                req.setSkill(skill);
+                req.setMinProficiency(Proficiency.valueOf(sr.minProficiency()));
+                req.setDemandPd(sr.demandPd());
+                return req;
+            })
+            .toList();
+    }
+
     private EpicSummaryDto toEpicSummaryDto(Epic epic) {
         List<Person> members = personRepository.findByTeamId(epic.getTeam().getId());
         List<SkillShortfallDto> shortfalls = derivation.skillShortfalls(epic, members);
@@ -463,11 +532,11 @@ public class PlanningService {
         for (DeltaRequest d : deltas) {
             UUID id = UUID.fromString(d.entityId());
             switch (d.entityType()) {
-                case "Epic" -> epicRepository.findById(id)
+                case "Epic"       -> epicRepository.findById(id)
                     .ifPresent(e -> teamIds.add(e.getTeam().getId()));
-                case "Person" -> personRepository.findById(id)
+                case "Person"     -> personRepository.findById(id)
                     .ifPresent(p -> teamIds.add(p.getTeam().getId()));
-                case "Team" -> teamIds.add(id);
+                case "Team"       -> teamIds.add(id);
                 case "Initiative" -> epicRepository.findByInitiativeId(id).stream()
                     .map(e -> e.getTeam().getId())
                     .forEach(teamIds::add);
@@ -476,20 +545,18 @@ public class PlanningService {
         return teamIds;
     }
 
-    /** Applies a field change to the in-memory (L1-cached) entity — no save. */
     private void applyDeltaField(DeltaRequest d) {
         UUID id = UUID.fromString(d.entityId());
         String v = d.newValue() != null ? d.newValue().toString() : null;
         switch (d.entityType()) {
-            case "Epic" -> epicRepository.findById(id).ifPresent(e -> applyEpicField(e, d.field(), v));
-            case "Person" -> personRepository.findById(id).ifPresent(p -> applyPersonField(p, d.field(), v));
-            case "Team" -> teamRepository.findById(id).ifPresent(t -> applyTeamField(t, d.field(), v));
+            case "Epic"       -> epicRepository.findById(id).ifPresent(e -> applyEpicField(e, d.field(), v));
+            case "Person"     -> personRepository.findById(id).ifPresent(p -> applyPersonField(p, d.field(), v));
+            case "Team"       -> teamRepository.findById(id).ifPresent(t -> applyTeamField(t, d.field(), v));
             case "Initiative" -> initiativeRepository.findById(id)
                 .ifPresent(i -> applyInitiativeField(i, d.field(), v));
         }
     }
 
-    /** Applies a field change and persists the entity — used by commitScenario. */
     private void applyAndSaveEntity(DeltaRequest d) {
         UUID id = UUID.fromString(d.entityId());
         String v = d.newValue() != null ? d.newValue().toString() : null;

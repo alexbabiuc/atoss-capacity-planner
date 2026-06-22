@@ -1,7 +1,8 @@
 package com.capacityplanner.controller;
 
+import com.capacityplanner.dto.PersonDto;
+import com.capacityplanner.dto.PersonRequest;
 import com.capacityplanner.entity.AvailabilityOverride;
-import com.capacityplanner.entity.Person;
 import com.capacityplanner.service.PlanningService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,41 +20,35 @@ public class PersonController {
     private final PlanningService planningService;
 
     @GetMapping
-    public ResponseEntity<List<Person>> listPersons(
+    public ResponseEntity<List<PersonDto>> listPersons(
         @RequestParam(required = false) UUID teamId) {
         return ResponseEntity.ok(planningService.getPersons(teamId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Person> getPerson(@PathVariable UUID id) {
+    public ResponseEntity<PersonDto> getPerson(@PathVariable UUID id) {
         return ResponseEntity.ok(planningService.getPerson(id));
     }
 
     @PostMapping
-    public ResponseEntity<Person> createPerson(@RequestBody Person person) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(planningService.createPerson(person));
+    public ResponseEntity<PersonDto> createPerson(@RequestBody PersonRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(planningService.createPerson(req));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Person> updatePerson(@PathVariable UUID id, @RequestBody Person person) {
-        return ResponseEntity.ok(planningService.updatePerson(id, person));
+    public ResponseEntity<PersonDto> updatePerson(@PathVariable UUID id, @RequestBody PersonRequest req) {
+        return ResponseEntity.ok(planningService.updatePerson(id, req));
     }
 
-    /**
-     * Add / replace an availability override.
-     * This is the on-demand mechanism for modelling attrition, leave, ramp-up.
-     * It is also the input to what-if scenarios when called in a scenario context.
-     */
     @PostMapping("/{id}/availability-overrides")
-    public ResponseEntity<Person> addAvailabilityOverride(
+    public ResponseEntity<PersonDto> addAvailabilityOverride(
         @PathVariable UUID id,
         @RequestBody AvailabilityOverride override) {
         return ResponseEntity.ok(planningService.addAvailabilityOverride(id, override));
     }
 
     @DeleteMapping("/{id}/availability-overrides/{index}")
-    public ResponseEntity<Person> removeAvailabilityOverride(
+    public ResponseEntity<PersonDto> removeAvailabilityOverride(
         @PathVariable UUID id,
         @PathVariable int index) {
         return ResponseEntity.ok(planningService.removeAvailabilityOverride(id, index));
