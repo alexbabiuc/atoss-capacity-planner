@@ -455,7 +455,7 @@ public class PlanningService {
                 ps.setProficiency(Proficiency.valueOf(sr.proficiency()));
                 return ps;
             })
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     }
 
     private List<EpicSkillRequirement> resolveSkillRequirements(List<EpicRequest.SkillRequirementRequest> requests) {
@@ -469,7 +469,7 @@ public class PlanningService {
                 req.setDemandPd(sr.demandPd());
                 return req;
             })
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
     }
 
     private EpicSummaryDto toEpicSummaryDto(Epic epic) {
