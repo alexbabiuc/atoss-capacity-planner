@@ -9,6 +9,8 @@ const router = createRouter({
     { path: '/epics/:id',           component: () => import('./pages/EpicDetail.vue') },
     { path: '/scenarios',           component: () => import('./pages/ScenarioBuilder.vue') },
     { path: '/changelog',           component: () => import('./pages/ChangeLog.vue') },
+    { path: '/admin/teams',         component: () => import('./pages/TeamsAdmin.vue') },
+    { path: '/admin/people',        component: () => import('./pages/PeopleAdmin.vue') },
   ],
 })
 

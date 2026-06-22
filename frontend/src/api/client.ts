@@ -12,6 +12,55 @@ const http = axios.create({
   auth: { username: 'admin', password: 'admin' },
 })
 
+// ── Request types (match backend request DTOs exactly) ────────────────────────
+
+export interface TeamRequest {
+  name?: string
+  overheadFactor?: number
+  supportFactor?: number
+}
+
+export interface PersonSkillRequest {
+  skillId: string
+  proficiency: string
+}
+
+export interface PersonRequest {
+  name?: string
+  teamId?: string
+  baseAvailability?: number
+  skills?: PersonSkillRequest[]
+}
+
+export interface InitiativeRequest {
+  name?: string
+  description?: string
+  topDownEstimate?: number
+  startDate?: string
+  targetDeliveryDate?: string
+  priority?: number
+  ownerName?: string
+  status?: string
+}
+
+export interface SkillRequirementRequest {
+  skillId: string
+  minProficiency: string
+  demandPd: number
+}
+
+export interface EpicRequest {
+  name?: string
+  teamId?: string
+  initiativeId?: string
+  estimate?: number
+  startDate?: string
+  dueDate?: string
+  priority?: string
+  status?: string
+  requiredSkills?: SkillRequirementRequest[]
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────────
 
 export const teamsApi = {
@@ -21,11 +70,11 @@ export const teamsApi = {
   get: (id: string, granularity: Granularity, from: string, to: string) =>
     http.get<TeamSummary>(`/teams/${id}`, { params: { granularity, from, to } }),
 
-  create: (team: Partial<TeamSummary>) =>
-    http.post<TeamSummary>('/teams', team),
+  create: (req: TeamRequest) =>
+    http.post<TeamSummary>('/teams', req),
 
-  update: (id: string, patch: Partial<TeamSummary>) =>
-    http.put<TeamSummary>(`/teams/${id}`, patch),
+  update: (id: string, req: TeamRequest) =>
+    http.put<TeamSummary>(`/teams/${id}`, req),
 }
 
 // ── People ────────────────────────────────────────────────────────────────────
@@ -37,11 +86,11 @@ export const peopleApi = {
   get: (id: string) =>
     http.get<Person>(`/people/${id}`),
 
-  create: (person: Partial<Person>) =>
-    http.post<Person>('/people', person),
+  create: (req: PersonRequest) =>
+    http.post<Person>('/people', req),
 
-  update: (id: string, patch: Partial<Person>) =>
-    http.put<Person>(`/people/${id}`, patch),
+  update: (id: string, req: PersonRequest) =>
+    http.put<Person>(`/people/${id}`, req),
 
   addOverride: (id: string, override: Person['availabilityOverrides'][0]) =>
     http.post<Person>(`/people/${id}/availability-overrides`, override),
@@ -59,11 +108,11 @@ export const initiativesApi = {
   get: (id: string) =>
     http.get<InitiativeSummary>(`/initiatives/${id}`),
 
-  create: (initiative: Partial<InitiativeSummary>) =>
-    http.post<InitiativeSummary>('/initiatives', initiative),
+  create: (req: InitiativeRequest) =>
+    http.post<InitiativeSummary>('/initiatives', req),
 
-  update: (id: string, patch: Partial<InitiativeSummary>) =>
-    http.put<InitiativeSummary>(`/initiatives/${id}`, patch),
+  update: (id: string, req: InitiativeRequest) =>
+    http.put<InitiativeSummary>(`/initiatives/${id}`, req),
 }
 
 // ── Epics ─────────────────────────────────────────────────────────────────────
@@ -75,11 +124,11 @@ export const epicsApi = {
   get: (id: string) =>
     http.get<EpicSummary>(`/epics/${id}`),
 
-  create: (epic: Partial<EpicSummary>) =>
-    http.post<EpicSummary>('/epics', epic),
+  create: (req: EpicRequest) =>
+    http.post<EpicSummary>('/epics', req),
 
-  update: (id: string, patch: Partial<EpicSummary>) =>
-    http.put<EpicSummary>(`/epics/${id}`, patch),
+  update: (id: string, req: EpicRequest) =>
+    http.put<EpicSummary>(`/epics/${id}`, req),
 
   delete: (id: string) =>
     http.delete(`/epics/${id}`),

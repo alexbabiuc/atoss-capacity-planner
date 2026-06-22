@@ -7,6 +7,9 @@
         <RouterLink to="/initiatives">Initiatives</RouterLink>
         <RouterLink to="/scenarios">Scenarios</RouterLink>
         <RouterLink to="/changelog">Change Log</RouterLink>
+        <span class="nav-sep">|</span>
+        <RouterLink to="/admin/teams">Teams</RouterLink>
+        <RouterLink to="/admin/people">People</RouterLink>
       </div>
       <div class="flag-counts">
         <span v-if="planning.redFlags.length" class="badge red">
@@ -115,4 +118,33 @@ a:hover { text-decoration: underline; }
 
 .empty { text-align: center; color: var(--c-muted); padding: 3rem 0; font-size: .875rem; }
 .loading { text-align: center; color: var(--c-muted); padding: 3rem 0; }
+
+/* Modal overlay — shared across all pages */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 1rem;
+}
+.modal-card {
+  background: var(--c-surface); border-radius: 8px; padding: 1.5rem;
+  width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+/* Form fields — shared across modal forms */
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: .875rem; }
+.field label { font-size: .8rem; font-weight: 500; color: var(--c-muted); }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--c-border); border-radius: 4px; padding: 6px 10px;
+  font-size: .875rem; background: #fff; width: 100%;
+}
+.field textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+
+.form-error {
+  background: #fee2e2; color: #991b1b; padding: .5rem .75rem;
+  border-radius: 4px; margin-bottom: 1rem; font-size: .875rem;
+}
+.form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.25rem; }
+
+.nav-sep { color: rgba(255,255,255,.25); margin: 0 .25rem; }
 </style>
