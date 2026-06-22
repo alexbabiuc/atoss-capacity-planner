@@ -142,6 +142,31 @@ at strategic planning altitude and complicate the comparison logic without addin
 
 ---
 
+## Frontend page inventory
+
+| Route | Page | Capabilities |
+|---|---|---|
+| `/` | CapacityOverview | Capacity vs. load chart; granularity and date range controls; team cards with flags |
+| `/initiatives` | InitiativeList | Browse all initiatives; **create** and **edit** via modal form |
+| `/initiatives/:id` | InitiativeDetail | View detail, decomposition gap, flags; **edit** initiative; **add** and **edit** epics |
+| `/epics/:id` | EpicDetail | View epic detail, skill shortfalls, timeline; **edit** epic via modal |
+| `/scenarios` | ScenarioBuilder | What-if analysis: add deltas → preview impact → commit; full end-to-end |
+| `/changelog` | ChangeLog | Audit trail — all committed change sets |
+| `/admin/teams` | TeamsAdmin | **Create** and **edit** teams; overhead and support factor sliders; focus-factor indicator |
+| `/admin/people` | PeopleAdmin | **Create** and **edit** people; team filter; skill assignment from known skill catalogue; **add/remove** availability overrides |
+
+### Admin constraints
+
+Skills are catalogued globally — a skill entry is created when a person with that skill is first
+persisted. New skills cannot be created through a dedicated UI because the backend exposes no
+`POST /skills` endpoint. To introduce a brand-new skill, add a person carrying it via the
+People admin, or use the Scenario Builder to patch an existing person's skills field.
+
+Availability overrides (PTO, parental leave, ramp-up) are managed per-person under the
+"Overrides" button on the People admin page. A factor of `0` models a full departure.
+
+---
+
 ## Deliberately deferred
 
 These are the honest "what breaks first at scale" and "what would you build next" answers:
@@ -166,3 +191,7 @@ These are the honest "what breaks first at scale" and "what would you build next
 6. **Live data integrations.** Jira import for epic data, HR system feed for availability.
 
 7. **Cost / budget dimension.** A natural extension once PD effort is modeled well.
+
+8. **Skill catalogue admin.** A `POST /skills` endpoint and dedicated Skills page would
+   allow operators to define the skill taxonomy independently of people. Currently skills
+   are implicitly defined when the first person carrying them is created.

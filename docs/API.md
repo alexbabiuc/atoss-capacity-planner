@@ -33,20 +33,29 @@ Body: partial `Team`
 
 ---
 
-## Persons
+## People
 
-### `GET /persons`
+### `GET /people`
 Query params: `teamId?` (filter by team)
 
 Response: `Person[]`
 
-### `GET /persons/:id`
-### `POST /persons`
+### `GET /people/:id`
+### `POST /people`
 Body: `{ name, teamId, baseAvailability?, skills? }`
 
-### `PUT /persons/:id`
+Skills format:
+```json
+[{ "skill": { "id": "uuid" }, "proficiency": "PROFICIENT" }]
+```
+Use skill IDs from existing people. To introduce a new skill for the first time,
+omit the `skills` field and add it via `PUT /people/:id` once the skill exists.
 
-### `POST /persons/:id/availability-overrides`
+### `PUT /people/:id`
+Partial update. Any field present in the body replaces the stored value.
+Send `"skills": [...]` to replace the entire skill list.
+
+### `POST /people/:id/availability-overrides`
 Adds a time-boxed availability deviation. This is also the input to
 what-if scenarios — apply an override with `factor: 0` from a future date
 to model a departure.
@@ -61,8 +70,8 @@ Body:
 }
 ```
 
-### `DELETE /persons/:id/availability-overrides/:index`
-Removes the override at the given list index.
+### `DELETE /people/:id/availability-overrides/:index`
+Removes the override at the given list index (0-based, ordered by `startDate`).
 
 ---
 
