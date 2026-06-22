@@ -15,12 +15,8 @@ A strategic capacity planning tool for engineering teams. Model team capacity, d
 
 ### PostgreSQL setup
 
-Create a database and user matching the defaults in `application.yml`:
-
-```sql
-CREATE USER capacity_planner WITH PASSWORD 'capacity_planner';
-CREATE DATABASE capacity_planner OWNER capacity_planner;
-```
+Start PostgressSQL via docker  
+docker run -d --name cp-db   -e POSTGRES_DB=capacity_planner   -e POSTGRES_USER=capacity_planner   -e POSTGRES_PASSWORD=capacity_planner   -p 5432:5432 postgres:16
 
 The schema and seed data are applied automatically by Flyway on first startup.
 
